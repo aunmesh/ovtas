@@ -1,10 +1,1056 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>OVTAS Project</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OVTAS &mdash; Exploring Vision-Language Models for Open-Vocabulary Zero-Shot Action Segmentation</title>
+
+<meta name="description" content="OVTAS is a training-free, zero-shot pipeline for open-vocabulary temporal action segmentation built on frozen vision-language models, with a systematic study of 14 VLMs across GTEA, 50 Salads and Breakfast.">
+<meta name="keywords" content="temporal action segmentation, open vocabulary, zero-shot, vision-language models, CLIP, SigLIP, optimal transport, OVTAS">
+<meta name="author" content="Asim Unmesh, Kaki Ramesh, Mayank Patel, Rahul Jain, Karthik Ramani">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="OVTAS: Exploring Vision-Language Models for Open-Vocabulary Zero-Shot Action Segmentation">
+<meta property="og:description" content="A training-free, zero-shot pipeline for open-vocabulary temporal action segmentation using frozen VLMs.">
+<meta property="og:image" content="static/images/pipeline.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OVTAS: Open-Vocabulary Zero-Shot Temporal Action Segmentation">
+<meta name="twitter:description" content="A training-free, zero-shot pipeline for open-vocabulary temporal action segmentation using frozen VLMs.">
+<meta name="twitter:image" content="static/images/pipeline.png">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9639;</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/css/style.css">
+
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+    chtml: { fontURL: 'static/mathjax/output/chtml/fonts/woff-v2' },
+    options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
+  };
+</script>
+<!-- MathJax is vendored locally so the page renders without a CDN round-trip. -->
+<script defer src="static/mathjax/tex-mml-chtml.js"></script>
 </head>
+
 <body>
-  <h1>Hello World!</h1>
-  <p>This is my OVTAS project page experiment.</p>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="#abstract">Abstract</a>
+    <a href="#release">Code &amp; Features</a>
+    <a href="#method">Method</a>
+    <a href="#results">Results</a>
+    <a href="#ablations">Ablations</a>
+    <a href="#analysis">Analysis</a>
+    <a href="#qualitative">Qualitative</a>
+    <a href="#bibtex">BibTeX</a>
+  </div>
+</nav>
+
+<!-- ======================================================== HEADER ==== -->
+<header class="hero">
+  <div class="container">
+    <p class="venue">arXiv Preprint &middot; 2026</p>
+
+    <h1 class="paper-title">
+      Exploring Vision-Language Models for<br>
+      Open-Vocabulary Zero-Shot Action Segmentation
+    </h1>
+
+    <p class="authors">
+      <span class="author">Asim Unmesh</span><sup>1</sup>,
+      <span class="author">Kaki Ramesh</span><sup>2</sup>,
+      <span class="author">Mayank Patel</span><sup>1</sup>,
+      <span class="author">Rahul Jain</span><sup>1</sup>,
+      <span class="author">Karthik Ramani</span><sup>1</sup>
+    </p>
+
+    <p class="affiliations">
+      <sup>1</sup>Purdue University, USA &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <sup>2</sup>Birla Institute of Technology and Science (BITS) Hyderabad, India
+    </p>
+
+    <div class="button-row">
+      <a class="btn" href="https://arxiv.org/abs/2602.21406" target="_blank" rel="noopener">
+        <span class="ico">&#128196;</span> arXiv
+      </a>
+      <a class="btn" href="https://arxiv.org/pdf/2602.21406" target="_blank" rel="noopener">
+        <span class="ico">&#128459;</span> PDF
+      </a>
+      <span class="btn btn-soon">
+        <span class="ico">&#60;/&#62;</span> Code <span class="tag">Coming soon</span>
+      </span>
+      <span class="btn btn-soon">
+        <span class="ico">&#128190;</span> VLM Features <span class="tag">Coming soon</span>
+      </span>
+      <a class="btn" href="#bibtex">
+        <span class="ico">&#127991;</span> BibTeX
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ======================================================== TEASER ==== -->
+<section id="teaser" style="padding-top: 22px;">
+  <div class="container">
+    <div class="subfig-stack">
+      <figure class="subfig">
+        <img class="bordered" src="static/images/prior_approach.png"
+             alt="Prior temporal action segmentation methods train a model on a fixed dataset action vocabulary and evaluate on the same closed label set.">
+        <p class="subcap">(a) Existing approaches &mdash; closed vocabulary, trained per dataset</p>
+      </figure>
+      <figure class="subfig">
+        <img class="bordered" src="static/images/our_approach.png"
+             alt="OVTAS runs a frozen vision-language model over the video frames together with an inference-time action vocabulary and produces a segmentation without any training.">
+        <p class="subcap">(b) OVTAS &mdash; open vocabulary, zero-shot, training-free</p>
+      </figure>
+    </div>
+    <figcaption>
+      <span class="fig-label">Problem setup.</span>
+      Existing methods (a) are trained against a fixed dataset action vocabulary
+      \(\mathcal{A}_\mathcal{D}\) and do not generalize beyond it. OVTAS (b) takes an
+      <em>inference-time</em> action vocabulary \(\mathcal{A}_{\text{inference}}\) and a frozen
+      VLM \(\mathcal{M}_{\text{vlm}}\), and segments the video with no task-specific
+      training or fine-tuning.
+    </figcaption>
+  </div>
+</section>
+
+<!-- ====================================================== ABSTRACT ==== -->
+<section id="abstract">
+  <div class="container">
+    <h2 class="section-title">Abstract</h2>
+    <div class="abstract-body">
+      <p>
+        Temporal Action Segmentation (TAS) requires dividing videos into action segments, yet the
+        vast space of activities and alternative breakdowns makes collecting comprehensive datasets
+        infeasible. Existing methods remain limited to closed vocabularies and fixed label sets.
+        In this work, we explore the largely unexplored problem of
+        <b>Open-Vocabulary Zero-Shot Temporal Action Segmentation (OVTAS)</b> by leveraging the
+        strong zero-shot capabilities of Vision&ndash;Language Models (VLMs). We introduce a
+        training-free pipeline that follows a segmentation-by-classification design:
+        (i) <i>Frame&ndash;Action Embedding Similarity (FAES)</i> matches video frames to candidate
+        action labels, and (ii) <i>Similarity-Matrix Temporal Segmentation (SMTS)</i> enforces
+        temporal consistency. Beyond proposing OVTAS, we present a systematic study across
+        14 diverse VLMs, providing the first broad analysis of their suitability for
+        open-vocabulary action segmentation. Experiments on standard benchmarks show that OVTAS
+        achieves strong results without task-specific supervision, underscoring the potential of
+        VLMs for structured temporal understanding. We release code and embeddings at our project
+        page.
+        <span class="muted" style="font-family: var(--sans); font-size: 0.85em;">
+          [Release in preparation &mdash; see <a href="#release">below</a>.]
+        </span>
+      </p>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="num">14</div>
+        <div class="lbl">VLMs studied</div>
+        <div class="sub">SigLIP &middot; CLIP &middot; OpenCLIP &middot; PECore</div>
+      </div>
+      <div class="stat">
+        <div class="num">3</div>
+        <div class="lbl">Benchmarks</div>
+        <div class="sub">GTEA &middot; 50 Salads &middot; Breakfast</div>
+      </div>
+      <div class="stat">
+        <div class="num">0</div>
+        <div class="lbl">Training steps</div>
+        <div class="sub">No backpropagation, no fine-tuning</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================= RELEASE ==== -->
+<section id="release">
+  <div class="container">
+    <h2 class="section-title">Code &amp; Feature Release</h2>
+
+    <div class="notice">
+      <h4>Coming soon for the community</h4>
+      <p>
+        <b>Our codebase and the extracted vision&ndash;language features will be released publicly
+        on this page.</b> We are preparing the release now and will post the links here as soon as
+        they are ready.
+      </p>
+      <p>The release will include:</p>
+      <ul>
+        <li>
+          <b>The full OVTAS codebase</b> &mdash; feature extraction, the FAES stage, the
+          optimal-transport SMTS decoder, all four training-free baselines
+          (Random&#8209;Uniform, ES&#8209;Mean, ES&#8209;Vote, ES&#8209;NRP), and the evaluation
+          scripts for F1@{10,25,50}, Edit and frame accuracy.
+        </li>
+        <li>
+          <b>Pre-extracted per-frame VLM features</b> for all
+          <b>14 VLMs across all three datasets</b> (GTEA, 50 Salads and Breakfast), together with
+          the cached action-label text embeddings.
+        </li>
+      </ul>
+      <p style="margin-top: 12px;">
+        Extracting features from large VLMs demands substantial compute &mdash; ours were extracted
+        on an NVIDIA A6000. By releasing ready-to-use embeddings we hope to remove that barrier, so
+        that the community can iterate on open-vocabulary action segmentation and other action
+        understanding tasks without repeating the extraction cost.
+      </p>
+    </div>
+
+    <p class="center muted small">
+      Please check back here, or watch the arXiv listing for updates.
+    </p>
+  </div>
+</section>
+
+<!-- ======================================================== METHOD ==== -->
+<section id="method">
+  <div class="container">
+    <h2 class="section-title">Method</h2>
+
+    <p>
+      OVTAS is a <b>training-free, zero-shot</b> pipeline that requires only a set of candidate
+      action labels (the <i>action-set supervision</i>) and the video frames as input. Action-set
+      supervision assumes that, given the high-level activity (e.g. &ldquo;making tea&rdquo;), we
+      know the set of possible fine-grained actions (e.g. &ldquo;boil water&rdquo;,
+      &ldquo;pour tea&rdquo;, &ldquo;add sugar&rdquo;) &mdash; but neither their order nor their
+      boundaries.
+    </p>
+
+    <figure>
+      <img src="static/images/pipeline.png"
+           alt="The two-stage OVTAS pipeline. Stage 1 encodes video frames and action label text with frozen encoders and forms a similarity matrix. Stage 2 decodes that matrix into temporally consistent segments with optimal transport.">
+      <figcaption>
+        <span class="fig-label">The OVTAS pipeline.</span>
+        A two-stage &ldquo;segmentation by classification&rdquo; design.
+        <b>Stage 1 (FAES)</b> generates a similarity matrix by matching frames with action labels.
+        <b>Stage 2 (SMTS)</b> uses optimal transport with a temporal prior to enforce temporal
+        consistency, producing stable action segments. Both encoders remain frozen (&#10052;).
+      </figcaption>
+    </figure>
+
+    <div class="stage-grid">
+      <div class="stage">
+        <div class="num">Stage 1</div>
+        <h4>Frame&ndash;Action Embedding Similarity</h4>
+        <p>
+          Each action label is normalised into a natural-language phrase
+          (&ldquo;pour_coffee&rdquo; &rarr; &ldquo;pour coffee&rdquo;) and encoded by the VLM text
+          encoder; frames are encoded by the vision encoder. Both are \(\ell_2\)-normalised row-wise
+          and matched by cosine similarity.
+        </p>
+      </div>
+      <div class="stage">
+        <div class="num">Stage 2</div>
+        <h4>Similarity-Matrix Temporal Segmentation</h4>
+        <p>
+          Frame-level VLM predictions are temporally inconsistent because they are made
+          independently. SMTS decodes the similarity matrix into a temporally consistent label
+          sequence with an entropy-regularised optimal transport formulation carrying a temporal
+          prior.
+        </p>
+      </div>
+    </div>
+
+    <h3>Stage 1 &mdash; FAES</h3>
+    <p>
+      Let \(T\) be the number of frames, \(N\) the number of action labels and \(C\) the embedding
+      dimension. With row-wise \(\ell_2\)-normalised frame embeddings
+      \(\mathbf{X}\in\mathbb{R}^{T\times C}\) and action-label text embeddings
+      \(\mathbf{A}\in\mathbb{R}^{N\times C}\), the similarity matrix and the per-frame
+      classification probabilities are
+    </p>
+    <div class="eq">
+      \[
+      \mathbf{S} \;=\; \mathbf{X}\,\mathbf{A}^{\top} \in \mathbb{R}^{T\times N},
+      \qquad
+      \mathbf{P} \;=\; \mathrm{softmax}_{N}(\mathbf{S}).
+      \]
+    </div>
+
+    <h3>Stage 2 &mdash; SMTS</h3>
+    <p>
+      We adopt the Action Segmentation OT (ASOT) decoder of Xu and Gould. Given
+      \(\mathbf{S}\), we define a visual cost \(\mathbf{C}=\mathbf{1}-\mathbf{S}\) and a diagonal
+      temporal prior \(R_{ij}=\left|\tfrac{i}{T}-\tfrac{j}{N}\right|\), which encourages monotone
+      alignment. We then solve for a coupling \(\Pi\in\mathbb{R}^{T\times N}\):
+    </p>
+    <div class="eq">
+      \[
+      \Pi^{\star}=\arg\min_{\Pi\in U(\mathbf{u},\mathbf{v})}
+      \;\langle \Pi,\;\mathbf{C}+\rho R\rangle \;-\;\varepsilon\,H(\Pi),
+      \qquad
+      \mathbf{u}=\tfrac{1}{T}\mathbf{1}_{T},\;\;\mathbf{v}=\tfrac{1}{N}\mathbf{1}_{N},
+      \]
+    </div>
+    <p>
+      where \(U(\mathbf{u},\mathbf{v})\) is the transport polytope and \(H(\Pi)\) the entropy of
+      \(\Pi\). The entropy term makes the problem convex with a unique solution;
+      \(\Pi^{\star}\) is computed with log-stabilised Sinkhorn iterations, which scale linearly in
+      \(T\!\times\!N\) per iteration. Each frame is finally assigned the action with maximum
+      transported mass,
+      \(\hat{y}_t=\arg\max_{j}\Pi^{\star}_{t,j}\).
+    </p>
+
+    <h3>What &ldquo;training-free&rdquo; means here</h3>
+    <p>
+      Training-free refers strictly to the absence of backpropagation-based weight updates. Both
+      encoders are used off-the-shelf and are never fine-tuned. Optimal-transport hyperparameters
+      are selected by grid search on a small set of held-out videos per dataset and then fixed for
+      all experiments &mdash; we use \(\varepsilon = 0.07\), \(\alpha = 0.5\), \(r = 0.04\),
+      \(\lambda_{\text{frames}} = 0.11\) and \(\lambda_{\text{actions}} = 0.01\). Unlike the
+      unbalanced formulation of prior work, we find the <b>balanced</b> formulation gives the
+      strongest results. Because the action order is unknown under action-set supervision, the
+      ordering of action embeddings used to build the temporal prior is <b>randomised</b>.
+    </p>
+
+    <h3>Positioning against prior supervision regimes</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="name">Method</th>
+            <th>Zero-Shot</th><th>Open-Vocab</th><th>Unsupervised</th>
+            <th>Weakly Sup.</th><th>Semi-Sup.</th><th>Training-Free</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="name">ASAL</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">COIN-SSL</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td></tr>
+          <tr><td class="name">NN-Viterbi</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">ASAL-SSL</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td></tr>
+          <tr><td class="name">TCCNet</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">UDE</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">CTC</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">D3TW</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">ASRF-unsup.</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">C2F-TCN</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">HTK</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">BCN</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">HVQ</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr><td class="name">U-OT</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td></tr>
+          <tr class="ours sep"><td class="name"><b>OVTAS (ours)</b></td><td class="best">&#10003;</td><td class="best">&#10003;</td><td>&#10007;</td><td class="best">&#10003;</td><td>&#10007;</td><td class="best">&#10003;</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="scroll-hint">Scroll the table horizontally &rarr;</p>
+    <p class="table-caption">
+      <span class="fig-label">Table 1.</span>
+      Comparison with other TAS methods by generalization ability and training-data needs.
+      &#10003; denotes applicability. OVTAS occupies a regime no prior method does:
+      training-free, zero-shot and open-vocabulary at once.
+    </p>
+  </div>
+</section>
+
+<!-- ======================================================= RESULTS ==== -->
+<section id="results">
+  <div class="container-wide">
+    <h2 class="section-title">Results</h2>
+
+    <div class="container" style="padding: 0;">
+      <p>
+        We evaluate on three standard action segmentation benchmarks using their official
+        evaluation splits, reporting the average across splits. We use five metrics:
+        <b>F1@10</b>, <b>F1@25</b>, <b>F1@50</b>, <b>Edit</b> and frame <b>Accuracy</b>;
+        <b>Avg</b> is the mean of those five. All four baselines are themselves training-free,
+        zero-shot and open-vocabulary, and share the same frozen encoder features and prompts as
+        OVTAS.
+      </p>
+      <div class="takeaway">
+        <b>Takeaway.</b> OVTAS outperforms every training-free baseline by a wide margin on all
+        three benchmarks &mdash; roughly <b>6.8&times;</b> the best baseline Avg on 50 Salads,
+        <b>3.3&times;</b> on GTEA and <b>2.3&times;</b> on Breakfast &mdash; establishing
+        encouraging results for the novel task of open-vocabulary zero-shot action segmentation.
+      </div>
+    </div>
+
+    <div class="tabs" data-panels="#results-panels" role="tablist">
+      <button class="tab is-active" data-tab="sal" role="tab" aria-selected="true">50 Salads</button>
+      <button class="tab" data-tab="gtea" role="tab" aria-selected="false">GTEA</button>
+      <button class="tab" data-tab="bf" role="tab" aria-selected="false">Breakfast</button>
+    </div>
+
+    <div id="results-panels">
+        <div class="tab-panel is-active" data-panel="sal">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="name">Method</th>
+                  <th>Backbone <span class="sub">(#params)</span></th>
+                  <th>F1@10</th><th>F1@25</th><th>F1@50</th>
+                  <th>Edit</th><th>Acc</th><th>Avg</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="sep"><td class="grp" colspan="8">Training-free zero-shot baselines</td></tr>
+                <tr><td class="name">Random</td><td><span class="sub">—</span></td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.20</td><td>5.46</td><td class="">1.13</td></tr>
+                <tr><td class="name">ES-Mean</td><td><span class="sub">—</span></td><td>1.49</td><td>0.13</td><td>0.04</td><td>5.40</td><td>5.63</td><td class="">2.54</td></tr>
+                <tr><td class="name">ES-Vote</td><td><span class="sub">—</span></td><td>2.77</td><td>0.84</td><td>0.31</td><td>6.72</td><td>5.68</td><td class="">3.26</td></tr>
+                <tr><td class="name">ES-NRP</td><td><span class="sub">—</span></td><td>6.81</td><td>5.90</td><td>2.73</td><td>8.00</td><td>7.24</td><td class="best">6.14</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — SigLIP</td></tr>
+                <tr class="ours"><td class="name">SigLIP-M1</td><td><span class="sub">so400m-p16-256-i18n<br>877.96 M</span></td><td>42.6</td><td>31.4</td><td>14.1</td><td>88.7</td><td>31.5</td><td class="best">41.7</td></tr>
+                <tr class="ours"><td class="name">SigLIP-M2</td><td><span class="sub">large-p16-384<br>652.48 M</span></td><td>42.4</td><td>31.3</td><td>14.2</td><td>87.9</td><td>31.4</td><td class="">41.4</td></tr>
+                <tr class="ours"><td class="name">SigLIP-M3</td><td><span class="sub">so400m-p14-384<br>1128.76 M</span></td><td>42.7</td><td>30.5</td><td>14.3</td><td>87.3</td><td>31.3</td><td class="">41.2</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — OpenCLIP</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M1</td><td><span class="sub">ViT-B/32 (laion2B-s34B-b79K)<br>151.28 M</span></td><td>40.8</td><td>30.0</td><td>13.2</td><td>78.0</td><td>30.7</td><td class="">38.5</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M2</td><td><span class="sub">ViT-B/16 (laion2B-s34B-b88K)<br>149.62 M</span></td><td>41.1</td><td>31.1</td><td>13.8</td><td>79.2</td><td>31.4</td><td class="best">39.3</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M3</td><td><span class="sub">ViT-L/14 (laion2B-s32B-b82K)<br>427.62 M</span></td><td>39.2</td><td>29.2</td><td>12.4</td><td>76.0</td><td>30.4</td><td class="">37.4</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M4</td><td><span class="sub">ViT-H/14 (laion2B-s32B-b79K)<br>986.11 M</span></td><td>39.6</td><td>29.2</td><td>13.5</td><td>77.7</td><td>29.5</td><td class="">37.9</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M5</td><td><span class="sub">ViT-g/14 (laion2B-s34B-b88K)<br>1366.68 M</span></td><td>39.1</td><td>28.8</td><td>12.4</td><td>73.7</td><td>30.1</td><td class="">36.8</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — CLIP</td></tr>
+                <tr class="ours"><td class="name">CLIP-M1</td><td><span class="sub">ViT-B/32<br>151.28 M</span></td><td>41.8</td><td>31.2</td><td>13.8</td><td>88.6</td><td>31.3</td><td class="">41.4</td></tr>
+                <tr class="ours"><td class="name">CLIP-M2</td><td><span class="sub">ViT-B/16<br>149.62 M</span></td><td>42.6</td><td>30.9</td><td>14.5</td><td>88.0</td><td>31.5</td><td class="best">41.5</td></tr>
+                <tr class="ours"><td class="name">CLIP-M3</td><td><span class="sub">ViT-L/14<br>427.62 M</span></td><td>41.3</td><td>30.0</td><td>13.6</td><td>85.5</td><td>30.8</td><td class="">40.2</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — PECore</td></tr>
+                <tr class="ours"><td class="name">PECore-M1</td><td><span class="sub">B/16-224<br>447.66 M</span></td><td>39.8</td><td>28.4</td><td>13.6</td><td>79.1</td><td>30.3</td><td class="best">38.2</td></tr>
+                <tr class="ours"><td class="name">PECore-M2</td><td><span class="sub">L/14-336<br>671.14 M</span></td><td>38.8</td><td>26.7</td><td>11.6</td><td>68.8</td><td>28.5</td><td class="">34.9</td></tr>
+                <tr class="ours"><td class="name">PECore-M3</td><td><span class="sub">G/14-448<br>2419.27 M</span></td><td>39.3</td><td>28.5</td><td>13.3</td><td>75.2</td><td>29.3</td><td class="">37.1</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="scroll-hint">Scroll the table horizontally &rarr;</p>
+        </div>
+        <div class="tab-panel" data-panel="gtea">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="name">Method</th>
+                  <th>Backbone <span class="sub">(#params)</span></th>
+                  <th>F1@10</th><th>F1@25</th><th>F1@50</th>
+                  <th>Edit</th><th>Acc</th><th>Avg</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="sep"><td class="grp" colspan="8">Training-free zero-shot baselines</td></tr>
+                <tr><td class="name">Random</td><td><span class="sub">—</span></td><td>0.12</td><td>0.01</td><td>0.01</td><td>2.06</td><td>5.61</td><td class="">1.56</td></tr>
+                <tr><td class="name">ES-Mean</td><td><span class="sub">—</span></td><td>7.08</td><td>3.99</td><td>1.67</td><td>13.00</td><td>5.99</td><td class="">6.35</td></tr>
+                <tr><td class="name">ES-Vote</td><td><span class="sub">—</span></td><td>7.32</td><td>4.63</td><td>1.87</td><td>12.68</td><td>5.96</td><td class="">6.49</td></tr>
+                <tr><td class="name">ES-NRP</td><td><span class="sub">—</span></td><td>7.75</td><td>5.35</td><td>2.01</td><td>8.29</td><td>12.96</td><td class="best">7.27</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — SigLIP</td></tr>
+                <tr class="ours"><td class="name">SigLIP-M1</td><td><span class="sub">so400m-p16-256-i18n<br>877.96 M</span></td><td>21.1</td><td>13.0</td><td>4.9</td><td>51.2</td><td>28.3</td><td class="">23.7</td></tr>
+                <tr class="ours"><td class="name">SigLIP-M2</td><td><span class="sub">large-p16-384<br>652.48 M</span></td><td>21.3</td><td>13.8</td><td>5.4</td><td>51.1</td><td>28.1</td><td class="best">23.9</td></tr>
+                <tr class="ours"><td class="name">SigLIP-M3</td><td><span class="sub">so400m-p14-384<br>1128.76 M</span></td><td>20.8</td><td>13.0</td><td>4.9</td><td>50.7</td><td>27.9</td><td class="">23.5</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — OpenCLIP</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M1</td><td><span class="sub">ViT-B/32 (laion2B-s34B-b79K)<br>151.28 M</span></td><td>15.2</td><td>9.6</td><td>3.6</td><td>34.0</td><td>20.4</td><td class="">16.6</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M2</td><td><span class="sub">ViT-B/16 (laion2B-s34B-b88K)<br>149.62 M</span></td><td>15.9</td><td>10.0</td><td>3.8</td><td>35.3</td><td>21.0</td><td class="best">17.2</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M3</td><td><span class="sub">ViT-L/14 (laion2B-s32B-b82K)<br>427.62 M</span></td><td>14.5</td><td>9.3</td><td>3.4</td><td>32.7</td><td>20.4</td><td class="">16.1</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M4</td><td><span class="sub">ViT-H/14 (laion2B-s32B-b79K)<br>986.11 M</span></td><td>14.8</td><td>9.4</td><td>3.5</td><td>33.1</td><td>20.2</td><td class="">16.2</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M5</td><td><span class="sub">ViT-g/14 (laion2B-s34B-b88K)<br>1366.68 M</span></td><td>14.4</td><td>9.1</td><td>3.3</td><td>31.9</td><td>19.9</td><td class="">15.7</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — CLIP</td></tr>
+                <tr class="ours"><td class="name">CLIP-M1</td><td><span class="sub">ViT-B/32<br>151.28 M</span></td><td>19.7</td><td>13.0</td><td>4.9</td><td>44.7</td><td>25.6</td><td class="">21.6</td></tr>
+                <tr class="ours"><td class="name">CLIP-M2</td><td><span class="sub">ViT-B/16<br>149.62 M</span></td><td>20.1</td><td>13.3</td><td>5.1</td><td>45.2</td><td>25.9</td><td class="best">21.9</td></tr>
+                <tr class="ours"><td class="name">CLIP-M3</td><td><span class="sub">ViT-L/14<br>427.62 M</span></td><td>19.2</td><td>12.7</td><td>4.7</td><td>43.9</td><td>25.2</td><td class="">21.2</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — PECore</td></tr>
+                <tr class="ours"><td class="name">PECore-M1</td><td><span class="sub">B/16-224<br>447.66 M</span></td><td>15.3</td><td>10.3</td><td>3.5</td><td>37.0</td><td>22.5</td><td class="best">17.7</td></tr>
+                <tr class="ours"><td class="name">PECore-M2</td><td><span class="sub">L/14-336<br>671.14 M</span></td><td>13.6</td><td>8.5</td><td>2.9</td><td>30.4</td><td>19.6</td><td class="">15.0</td></tr>
+                <tr class="ours"><td class="name">PECore-M3</td><td><span class="sub">G/14-448<br>2419.27 M</span></td><td>14.2</td><td>9.1</td><td>3.2</td><td>31.8</td><td>20.1</td><td class="">15.7</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="scroll-hint">Scroll the table horizontally &rarr;</p>
+        </div>
+        <div class="tab-panel" data-panel="bf">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="name">Method</th>
+                  <th>Backbone <span class="sub">(#params)</span></th>
+                  <th>F1@10</th><th>F1@25</th><th>F1@50</th>
+                  <th>Edit</th><th>Acc</th><th>Avg</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="sep"><td class="grp" colspan="8">Training-free zero-shot baselines</td></tr>
+                <tr><td class="name">Random</td><td><span class="sub">—</span></td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.72</td><td>17.45</td><td class="">3.63</td></tr>
+                <tr><td class="name">ES-Mean</td><td><span class="sub">—</span></td><td>20.56</td><td>11.97</td><td>3.63</td><td>22.39</td><td>17.14</td><td class="">15.14</td></tr>
+                <tr><td class="name">ES-Vote</td><td><span class="sub">—</span></td><td>22.15</td><td>13.69</td><td>4.52</td><td>24.66</td><td>17.15</td><td class="">16.43</td></tr>
+                <tr><td class="name">ES-NRP</td><td><span class="sub">—</span></td><td>24.38</td><td>19.46</td><td>8.73</td><td>36.35</td><td>11.83</td><td class="best">20.15</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — SigLIP</td></tr>
+                <tr class="ours"><td class="name">SigLIP-M1</td><td><span class="sub">so400m-p16-256-i18n<br>877.96 M</span></td><td>54.0</td><td>39.5</td><td>15.0</td><td>92.7</td><td>30.9</td><td class="">46.4</td></tr>
+                <tr class="ours"><td class="name">SigLIP-M2</td><td><span class="sub">large-p16-384<br>652.48 M</span></td><td>54.0</td><td>39.5</td><td>15.2</td><td>92.7</td><td>30.9</td><td class="best">46.5</td></tr>
+                <tr class="ours"><td class="name">SigLIP-M3</td><td><span class="sub">so400m-p14-384<br>1128.76 M</span></td><td>53.8</td><td>39.2</td><td>15.1</td><td>92.5</td><td>30.8</td><td class="">46.3</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — OpenCLIP</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M1</td><td><span class="sub">ViT-B/32 (laion2B-s34B-b79K)<br>151.28 M</span></td><td>52.6</td><td>38.2</td><td>14.8</td><td>90.3</td><td>30.4</td><td class="">45.3</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M2</td><td><span class="sub">ViT-B/16 (laion2B-s34B-b88K)<br>149.62 M</span></td><td>53.5</td><td>38.9</td><td>15.4</td><td>91.2</td><td>30.7</td><td class="best">45.9</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M3</td><td><span class="sub">ViT-L/14 (laion2B-s32B-b82K)<br>427.62 M</span></td><td>52.8</td><td>38.1</td><td>14.9</td><td>90.5</td><td>30.2</td><td class="">45.3</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M4</td><td><span class="sub">ViT-H/14 (laion2B-s32B-b79K)<br>986.11 M</span></td><td>53.0</td><td>38.4</td><td>15.0</td><td>90.8</td><td>30.3</td><td class="">45.5</td></tr>
+                <tr class="ours"><td class="name">OpenCLIP-M5</td><td><span class="sub">ViT-g/14 (laion2B-s34B-b88K)<br>1366.68 M</span></td><td>52.3</td><td>37.7</td><td>14.7</td><td>89.8</td><td>29.9</td><td class="">44.8</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — CLIP</td></tr>
+                <tr class="ours"><td class="name">CLIP-M1</td><td><span class="sub">ViT-B/32<br>151.28 M</span></td><td>54.0</td><td>39.5</td><td>15.2</td><td>92.6</td><td>30.9</td><td class="">46.4</td></tr>
+                <tr class="ours"><td class="name">CLIP-M2</td><td><span class="sub">ViT-B/16<br>149.62 M</span></td><td>54.1</td><td>39.6</td><td>15.3</td><td>92.8</td><td>31.0</td><td class="best">46.6</td></tr>
+                <tr class="ours"><td class="name">CLIP-M3</td><td><span class="sub">ViT-L/14<br>427.62 M</span></td><td>53.7</td><td>39.1</td><td>15.0</td><td>92.1</td><td>30.7</td><td class="">46.1</td></tr>
+                <tr class="sep"><td class="grp" colspan="8">OVTAS (ours) — PECore</td></tr>
+                <tr class="ours"><td class="name">PECore-M1</td><td><span class="sub">B/16-224<br>447.66 M</span></td><td>53.9</td><td>39.4</td><td>15.4</td><td>91.6</td><td>30.7</td><td class="best">46.2</td></tr>
+                <tr class="ours"><td class="name">PECore-M2</td><td><span class="sub">L/14-336<br>671.14 M</span></td><td>52.1</td><td>37.3</td><td>14.5</td><td>88.7</td><td>29.6</td><td class="">44.4</td></tr>
+                <tr class="ours"><td class="name">PECore-M3</td><td><span class="sub">G/14-448<br>2419.27 M</span></td><td>53.0</td><td>38.5</td><td>15.1</td><td>89.9</td><td>30.1</td><td class="">45.3</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="scroll-hint">Scroll the table horizontally &rarr;</p>
+        </div>
+    </div>
+
+    <div class="container" style="padding: 0;">
+      <p class="table-caption">
+        <span class="fig-label">Table 2.</span>
+        Comparison of baselines and all 14 VLM variants across the three datasets. Avg is the mean
+        of the F1 scores, Edit and Accuracy. The <span class="best">highest Avg</span> within each
+        family is highlighted. Baselines are reported to two decimals as in the paper; OVTAS rows
+        to one.
+      </p>
+
+      <h3>What the numbers say</h3>
+      <ul class="tight">
+        <li>
+          Among the training-free baselines, <b>ES-NRP</b> is consistently strongest, confirming
+          that equal-splits baselines benefit from a non-repetition constraint &mdash; so it is the
+          most representative baseline to beat.
+        </li>
+        <li>
+          Differences between VLMs are <b>small on Breakfast and 50 Salads</b> but pronounced on
+          GTEA, where the egocentric viewpoint, rapid transitions and large number of fine-grained
+          classes make the benchmark hardest.
+        </li>
+        <li>
+          <b>Edit</b> scores sit far above the F1 scores throughout. Since Edit evaluates temporal
+          ordering and continuity while F1 measures segment-wise overlap at a threshold, this gap
+          suggests ordering is recovered more reliably than exact boundary placement.
+        </li>
+      </ul>
+
+      <h3>Benchmark statistics</h3>
+      <div class="fig-grid-2">
+        <div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th class="name">Dataset</th><th>Min (s)</th><th>Max (s)</th><th>Mean (s)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="name">GTEA</td><td>42.27</td><td>133.93</td><td>74.35</td></tr>
+                <tr><td class="name">Breakfast</td><td>12.27</td><td>649.53</td><td>137.40</td></tr>
+                <tr><td class="name">50 Salads</td><td>251.60</td><td>605.00</td><td>385.25</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="table-caption"><span class="fig-label">Table 3.</span> Video duration statistics, in seconds.</p>
+        </div>
+        <div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th class="name">Dataset</th><th>Min</th><th>Max</th><th>Mean</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="name">GTEA</td><td>24</td><td>49</td><td>36.3</td></tr>
+                <tr><td class="name">Breakfast</td><td>1</td><td>18</td><td>5.4</td></tr>
+                <tr><td class="name">50 Salads</td><td>15</td><td>27</td><td>20.7</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="table-caption"><span class="fig-label">Table 4.</span> Ground-truth segments per video.</p>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th class="name">Dataset</th><th>Min (s)</th><th>Max (s)</th><th>Mean (s)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="name">GTEA</td><td>0.07</td><td>44.73</td><td>1.94</td></tr>
+            <tr><td class="name">Breakfast</td><td>0.07</td><td>386.00</td><td>20.95</td></tr>
+            <tr><td class="name">50 Salads</td><td>0.03</td><td>138.47</td><td>18.59</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="table-caption">
+        <span class="fig-label">Table 5.</span>
+        Segment duration statistics. GTEA's mean segment lasts just <b>1.94&thinsp;s</b> against
+        20.95&thinsp;s in Breakfast and 18.59&thinsp;s in 50 Salads &mdash; the model must
+        repeatedly localise boundaries within very short spans, leaving little room for temporal
+        context aggregation.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== ABLATIONS ==== -->
+<section id="ablations">
+  <div class="container">
+    <h2 class="section-title">Ablations</h2>
+
+    <h3>Stage ablation</h3>
+    <p>
+      We ablate Stage 1 by randomly permuting the frame and action-embedding features, and Stage 2
+      by taking per-frame argmax predictions instead of the OT decoding. Both stages prove critical:
+      removing either produces significant drops across every metric on every dataset.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="name">Dataset</th><th class="name">Ablated stage</th>
+            <th>F1@10</th><th>F1@25</th><th>F1@50</th><th>Edit</th><th>Acc</th><th>Avg</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="sep ours">
+            <td class="name" rowspan="3"><b>50 Salads</b></td><td class="name">None (full pipeline)</td>
+            <td>41.84</td><td>31.19</td><td>13.84</td><td>88.58</td><td>31.30</td><td class="best">41.81</td>
+          </tr>
+          <tr>
+            <td class="name">w/o Stage&nbsp;1 (FAES)</td>
+            <td>6.71 <span class="drop">&darr;35.13</span></td>
+            <td>5.16 <span class="drop">&darr;26.03</span></td>
+            <td>2.27 <span class="drop">&darr;11.57</span></td>
+            <td>9.35 <span class="drop">&darr;79.23</span></td>
+            <td>28.53 <span class="drop">&darr;2.77</span></td>
+            <td>10.40 <span class="drop">&darr;31.41</span></td>
+          </tr>
+          <tr>
+            <td class="name">w/o Stage&nbsp;2 (SMTS)</td>
+            <td>0.17 <span class="drop">&darr;41.67</span></td>
+            <td>0.08 <span class="drop">&darr;31.11</span></td>
+            <td>0.03 <span class="drop">&darr;13.81</span></td>
+            <td>0.88 <span class="drop">&darr;87.70</span></td>
+            <td>5.48 <span class="drop">&darr;25.82</span></td>
+            <td>3.01 <span class="drop">&darr;38.80</span></td>
+          </tr>
+
+          <tr class="sep ours">
+            <td class="name" rowspan="3"><b>GTEA</b></td><td class="name">None (full pipeline)</td>
+            <td>21.33</td><td>13.76</td><td>5.44</td><td>51.07</td><td>28.08</td><td class="best">23.14</td>
+          </tr>
+          <tr>
+            <td class="name">w/o Stage&nbsp;1 (FAES)</td>
+            <td>1.38 <span class="drop">&darr;19.95</span></td>
+            <td>0.60 <span class="drop">&darr;13.16</span></td>
+            <td>0.25 <span class="drop">&darr;5.19</span></td>
+            <td>17.39 <span class="drop">&darr;33.68</span></td>
+            <td>17.30 <span class="drop">&darr;10.78</span></td>
+            <td>7.38 <span class="drop">&darr;15.76</span></td>
+          </tr>
+          <tr>
+            <td class="name">w/o Stage&nbsp;2 (SMTS)</td>
+            <td>1.18 <span class="drop">&darr;20.15</span></td>
+            <td>0.52 <span class="drop">&darr;13.24</span></td>
+            <td>0.16 <span class="drop">&darr;5.28</span></td>
+            <td>3.95 <span class="drop">&darr;47.12</span></td>
+            <td>5.41 <span class="drop">&darr;22.67</span></td>
+            <td>2.64 <span class="drop">&darr;20.50</span></td>
+          </tr>
+
+          <tr class="sep ours">
+            <td class="name" rowspan="3"><b>Breakfast</b></td><td class="name">None (full pipeline)</td>
+            <td>54.26</td><td>39.60</td><td>15.34</td><td>92.44</td><td>30.89</td><td class="best">46.51</td>
+          </tr>
+          <tr>
+            <td class="name">w/o Stage&nbsp;1 (FAES)</td>
+            <td>12.58 <span class="drop">&darr;41.68</span></td>
+            <td>8.36 <span class="drop">&darr;31.24</span></td>
+            <td>2.85 <span class="drop">&darr;12.49</span></td>
+            <td>18.87 <span class="drop">&darr;73.57</span></td>
+            <td>26.08 <span class="drop">&darr;4.81</span></td>
+            <td>13.75 <span class="drop">&darr;32.76</span></td>
+          </tr>
+          <tr>
+            <td class="name">w/o Stage&nbsp;2 (SMTS)</td>
+            <td>1.16 <span class="drop">&darr;53.10</span></td>
+            <td>0.67 <span class="drop">&darr;38.93</span></td>
+            <td>0.27 <span class="drop">&darr;15.07</span></td>
+            <td>8.13 <span class="drop">&darr;84.31</span></td>
+            <td>17.50 <span class="drop">&darr;13.39</span></td>
+            <td>5.95 <span class="drop">&darr;40.56</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="scroll-hint">Scroll the table horizontally &rarr;</p>
+    <p class="table-caption">
+      <span class="fig-label">Table 6.</span>
+      Stage ablations. Ablating Stage&nbsp;1 corresponds to Random-ASOT; ablating Stage&nbsp;2
+      corresponds to per-frame argmax decoding. Drops from the full pipeline are shown in
+      <span class="drop">blue</span>.
+    </p>
+
+    <h3>Temporal prior and \(\ell_2\) normalisation</h3>
+    <p>
+      We independently ablate the \(\ell_2\) normalisation in Stage&nbsp;1 and the temporal prior in
+      Stage&nbsp;2, reporting on GTEA. Both design choices turn out to be load-bearing: without
+      either one, the Avg falls to 2.69 and 3.95 respectively &mdash; close to the random baseline
+      (1.56) and well below the strongest training-free baseline (7.27).
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="name">Metric</th><th>Best</th>
+            <th>w/o Temporal Prior</th><th>w/o \(\ell_2\) Norm</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="name">F1@10</td><td class="best">21.33</td>
+            <td>1.12 <span class="drop">&darr;20.21</span></td>
+            <td>2.36 <span class="drop">&darr;18.97</span></td></tr>
+          <tr><td class="name">F1@25</td><td class="best">13.76</td>
+            <td>0.56 <span class="drop">&darr;13.20</span></td>
+            <td>1.12 <span class="drop">&darr;12.64</span></td></tr>
+          <tr><td class="name">F1@50</td><td class="best">5.44</td>
+            <td>0.19 <span class="drop">&darr;5.25</span></td>
+            <td>0.62 <span class="drop">&darr;4.82</span></td></tr>
+          <tr><td class="name">Edit</td><td class="best">51.07</td>
+            <td>5.04 <span class="drop">&darr;46.03</span></td>
+            <td>7.23 <span class="drop">&darr;43.84</span></td></tr>
+          <tr><td class="name">Acc</td><td class="best">28.08</td>
+            <td>6.54 <span class="drop">&darr;21.54</span></td>
+            <td>8.43 <span class="drop">&darr;19.65</span></td></tr>
+          <tr class="sep"><td class="name"><b>Avg</b></td><td class="best"><b>23.14</b></td>
+            <td>2.69 <span class="drop">&darr;20.45</span></td>
+            <td>3.95 <span class="drop">&darr;19.19</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-caption">
+      <span class="fig-label">Table 7.</span>
+      Ablation on the temporal prior and \(\ell_2\) normalisation, on GTEA. Arrows show the drop
+      from Best.
+    </p>
+  </div>
+</section>
+
+<!-- ====================================================== ANALYSIS ==== -->
+<section id="analysis">
+  <div class="container">
+    <h2 class="section-title">Analysis</h2>
+
+    <h3>Which VLM family works best?</h3>
+    <p>
+      Averaging each family's performance across the three benchmarks yields a stable ranking:
+      <b>SigLIP outperforms all others</b>, followed by CLIP, with OpenCLIP and PECore trailing.
+      This ordering is consistent across all three datasets, suggesting the relative strength of
+      each family is stable across domains.
+    </p>
+
+    <figure>
+      <img class="bordered" src="static/images/vlm_family.png"
+           alt="Line plot of the average metric per VLM family across GTEA, 50 Salads and Breakfast, showing SigLIP highest, then CLIP, then OpenCLIP and PECore.">
+      <figcaption>
+        <span class="fig-label">Figure 3.</span>
+        VLM family average of the Avg metric across datasets (GTEA, 50 Salads, Breakfast).
+        Each line is a VLM family.
+      </figcaption>
+    </figure>
+
+    <h3>Does scaling the VLM help?</h3>
+    <div class="takeaway">
+      <b>No.</b> In every family the <b>largest checkpoint is never the best one</b>. OpenCLIP
+      ViT-B/16 (149.62&thinsp;M) beats ViT-g/14 (1366.68&thinsp;M); CLIP ViT-B/16 beats ViT-L/14;
+      PECore B/16-224 beats both L/14-336 and G/14-448; SigLIP so400m-p14-384 (1128.76&thinsp;M)
+      trails its two smaller siblings on all three datasets. Simply scaling VLMs up does not yield
+      better action-segmentation performance under OVTAS.
+    </div>
+
+    <figure>
+      <img class="bordered" src="static/images/vlm_sizes.png"
+           alt="Scatter of performance against model parameter count, grouped by family, with shaded parameter-size bins; larger models do not perform better.">
+      <figcaption>
+        <span class="fig-label">Figure 4.</span>
+        <b>Performance vs. model size.</b> Models are grouped by family (SigLIP, CLIP, OpenCLIP,
+        PECore). Shaded regions indicate parameter-size bins: Low (&le;400&thinsp;M),
+        Large (400&ndash;800&thinsp;M), Huge (800&ndash;1500&thinsp;M) and
+        Giant (&gt;1500&thinsp;M).
+      </figcaption>
+    </figure>
+
+    <p>
+      As future directions to close this gap, we point to (i) stronger text prompting and
+      (ii) video-frame pre-processing such as cropping &mdash; together these may extract frame and
+      action-label embeddings that do improve with increasing VLM size.
+    </p>
+
+    <h3>Where does OVTAS get confused?</h3>
+    <p>
+      Examining per-action confusion on GTEA (SigLIP-M1) shows that <code>take</code> acts as a
+      dominant attractor for most manipulation actions, since its reaching motion overlaps with the
+      onset of nearly every other action. <code>shake</code> is almost entirely misclassified,
+      reflecting the limitation of image-trained VLMs on dynamic motions.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="name">GT action type</th>
+            <th>take</th><th>put</th><th>open</th><th>close</th><th>pour</th><th>scoop</th>
+            <th>spread</th><th>stir</th><th>fold</th><th>shake</th><th>SIL</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="name"><b>Accuracy (%)</b></td>
+            <td>41</td><td>36</td><td>35</td><td>35</td><td>37</td><td>21</td>
+            <td>41</td><td class="best">54</td><td>37</td><td>1</td><td>22</td>
+          </tr>
+          <tr class="sep">
+            <td class="name">Top misclassified as</td>
+            <td>put</td><td>take</td><td>take</td><td>take</td><td>take</td><td>take</td>
+            <td>put</td><td>open</td><td>SIL</td><td>open</td><td>put</td>
+          </tr>
+          <tr>
+            <td class="name">&hellip;&thinsp;(%)</td>
+            <td>12</td><td>17</td><td>21</td><td>29</td><td>15</td><td>28</td>
+            <td>29</td><td>15</td><td>24</td><td>31</td><td>29</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="scroll-hint">Scroll the table horizontally &rarr;</p>
+    <p class="table-caption">
+      <span class="fig-label">Table 8.</span>
+      Action-type confusion on GTEA (SigLIP-M1).
+    </p>
+
+    <h3>Effect of video length and segment density</h3>
+    <p>
+      Performance decreases consistently as video length increases, across all three datasets:
+      longer videos bring greater temporal variability and amplify error propagation in
+      training-free segmentation.
+    </p>
+
+    <div class="tabs" data-panels="#length-panels" role="tablist">
+      <button class="tab is-active" data-tab="len-bf" role="tab" aria-selected="true">Breakfast</button>
+      <button class="tab" data-tab="len-gtea" role="tab" aria-selected="false">GTEA</button>
+      <button class="tab" data-tab="len-sal" role="tab" aria-selected="false">50 Salads</button>
+    </div>
+
+    <div id="length-panels">
+      <div class="tab-panel is-active" data-panel="len-bf">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="name">Video length</th><th>Acc</th><th>Edit</th><th>F1@10</th><th>F1@25</th><th>F1@50</th><th>Avg</th></tr></thead>
+            <tbody>
+              <tr><td class="name">0&ndash;60&thinsp;s</td><td>46.31</td><td>98.51</td><td>76.05</td><td>62.39</td><td>29.16</td><td class="best">62.48</td></tr>
+              <tr><td class="name">60&ndash;120&thinsp;s</td><td>40.99</td><td>96.28</td><td>63.98</td><td>50.89</td><td>20.26</td><td>54.48</td></tr>
+              <tr><td class="name">&ge;120&thinsp;s</td><td>26.41</td><td>82.37</td><td>41.40</td><td>25.81</td><td>8.16</td><td>36.83</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tab-panel" data-panel="len-gtea">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="name">Video length</th><th>Acc</th><th>Edit</th><th>F1@10</th><th>F1@25</th><th>F1@50</th><th>Avg</th></tr></thead>
+            <tbody>
+              <tr><td class="name">0&ndash;60&thinsp;s</td><td>27.75</td><td>50.65</td><td>24.38</td><td>17.14</td><td>8.38</td><td class="best">25.66</td></tr>
+              <tr><td class="name">60&ndash;120&thinsp;s</td><td>23.31</td><td>33.19</td><td>13.54</td><td>8.12</td><td>3.05</td><td>16.24</td></tr>
+              <tr><td class="name">&ge;120&thinsp;s</td><td>16.82</td><td>12.99</td><td>6.25</td><td>2.27</td><td>0.57</td><td>7.78</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tab-panel" data-panel="len-sal">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="name">Video length</th><th>Acc</th><th>Edit</th><th>F1@10</th><th>F1@25</th><th>F1@50</th><th>Avg</th></tr></thead>
+            <tbody>
+              <tr><td class="name">240&ndash;360&thinsp;s</td><td>30.57</td><td>84.37</td><td>42.15</td><td>31.39</td><td>13.73</td><td class="best">40.44</td></tr>
+              <tr><td class="name">360&ndash;480&thinsp;s</td><td>32.92</td><td>75.01</td><td>41.73</td><td>31.34</td><td>14.96</td><td>39.19</td></tr>
+              <tr><td class="name">&ge;480&thinsp;s</td><td>23.40</td><td>76.11</td><td>28.31</td><td>19.88</td><td>7.41</td><td>31.02</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <p class="table-caption">
+      <span class="fig-label">Table 9.</span>
+      Performance variation by video duration.
+    </p>
+
+    <p>
+      The density of fine-grained action boundaries matters just as much. GTEA videos comprise many
+      brief segments (mean &asymp;&thinsp;36 per video) and the model performs worst there;
+      Breakfast averages &asymp;&thinsp;5 segments and performs best; 50 Salads sits between the
+      two. Tightly packed sequences of short actions are especially difficult.
+    </p>
+
+    <div class="tabs" data-panels="#segcount-panels" role="tablist">
+      <button class="tab is-active" data-tab="seg-gtea" role="tab" aria-selected="true">GTEA</button>
+      <button class="tab" data-tab="seg-bf" role="tab" aria-selected="false">Breakfast</button>
+      <button class="tab" data-tab="seg-sal" role="tab" aria-selected="false">50 Salads</button>
+    </div>
+
+    <div id="segcount-panels">
+      <div class="tab-panel is-active" data-panel="seg-gtea">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="name">GT segments</th><th>Acc</th><th>Edit</th><th>F1@10</th><th>F1@25</th><th>F1@50</th><th>Avg</th></tr></thead>
+            <tbody>
+              <tr><td class="name">20&ndash;29</td><td>28.23</td><td>72.77</td><td>48.55</td><td>33.53</td><td>16.18</td><td class="best">39.85</td></tr>
+              <tr><td class="name">30&ndash;39</td><td>23.12</td><td>42.79</td><td>19.11</td><td>11.78</td><td>4.78</td><td>20.32</td></tr>
+              <tr><td class="name">40&ndash;49</td><td>22.19</td><td>15.14</td><td>10.06</td><td>5.95</td><td>2.27</td><td>11.12</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tab-panel" data-panel="seg-bf">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="name">GT segments</th><th>Acc</th><th>Edit</th><th>F1@10</th><th>F1@25</th><th>F1@50</th><th>Avg</th></tr></thead>
+            <tbody>
+              <tr><td class="name">0&ndash;4</td><td>42.79</td><td>98.69</td><td>71.90</td><td>59.28</td><td>26.25</td><td class="best">59.78</td></tr>
+              <tr><td class="name">5&ndash;9</td><td>29.00</td><td>88.56</td><td>50.52</td><td>35.06</td><td>12.60</td><td>43.15</td></tr>
+              <tr><td class="name">10&ndash;14</td><td>25.11</td><td>72.61</td><td>38.81</td><td>23.16</td><td>7.82</td><td>33.50</td></tr>
+              <tr><td class="name">15&ndash;19</td><td>22.14</td><td>32.30</td><td>21.54</td><td>12.73</td><td>4.35</td><td>18.61</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tab-panel" data-panel="seg-sal">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="name">GT segments</th><th>Acc</th><th>Edit</th><th>F1@10</th><th>F1@25</th><th>F1@50</th><th>Avg</th></tr></thead>
+            <tbody>
+              <tr><td class="name">15&ndash;19</td><td>25.73</td><td>83.77</td><td>32.79</td><td>23.86</td><td>10.06</td><td>35.24</td></tr>
+              <tr><td class="name">20&ndash;24</td><td>32.74</td><td>77.48</td><td>44.37</td><td>33.12</td><td>14.08</td><td class="best">40.36</td></tr>
+              <tr><td class="name">25&ndash;29</td><td>32.00</td><td>65.57</td><td>38.57</td><td>24.62</td><td>14.18</td><td>34.99</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <p class="table-caption">
+      <span class="fig-label">Table 10.</span>
+      Performance variation by the number of ground-truth action segments per video.
+    </p>
+  </div>
+</section>
+
+<!-- =================================================== QUALITATIVE ==== -->
+<section id="qualitative">
+  <div class="container">
+    <h2 class="section-title">Qualitative Results</h2>
+    <p>
+      Each pair of colour bars shows the ground-truth segmentation (top) above the OVTAS prediction
+      (bottom) for one video, with segments coloured by action label.
+    </p>
+
+    <div class="tabs" data-panels="#qual-panels" role="tablist">
+      <button class="tab is-active" data-tab="q-gtea" role="tab" aria-selected="true">GTEA</button>
+      <button class="tab" data-tab="q-sal" role="tab" aria-selected="false">50 Salads</button>
+      <button class="tab" data-tab="q-bf" role="tab" aria-selected="false">Breakfast</button>
+    </div>
+
+    <div id="qual-panels">
+      <div class="tab-panel is-active" data-panel="q-gtea">
+        <figure><img class="bordered" src="static/images/qualitative/gtea_example_000.png" alt="GTEA qualitative result: ground truth and predicted segmentation bars."></figure>
+        <figure><img class="bordered" src="static/images/qualitative/gtea_example_001.png" alt="GTEA qualitative result: ground truth and predicted segmentation bars."></figure>
+        <figure><img class="bordered" src="static/images/qualitative/gtea_example_004.png" alt="GTEA qualitative result: ground truth and predicted segmentation bars."></figure>
+        <figure><img class="bordered" src="static/images/qualitative/gtea_example_009.png" alt="GTEA qualitative result: ground truth and predicted segmentation bars."></figure>
+      </div>
+      <div class="tab-panel" data-panel="q-sal">
+        <figure><img class="bordered" src="static/images/qualitative/50_salads_example_000.png" alt="50 Salads qualitative result: ground truth and predicted segmentation bars."></figure>
+        <figure><img class="bordered" src="static/images/qualitative/50_salads_example_001.png" alt="50 Salads qualitative result: ground truth and predicted segmentation bars."></figure>
+        <figure><img class="bordered" src="static/images/qualitative/50_salads_example_004.png" alt="50 Salads qualitative result: ground truth and predicted segmentation bars."></figure>
+        <figure><img class="bordered" src="static/images/qualitative/50_salads_example_009.png" alt="50 Salads qualitative result: ground truth and predicted segmentation bars."></figure>
+      </div>
+      <div class="tab-panel" data-panel="q-bf">
+        <figure><img class="bordered" src="static/images/qualitative/breakfast_example_000.png" alt="Breakfast qualitative result: ground truth and predicted segmentation bars."></figure>
+        <figure><img class="bordered" src="static/images/qualitative/breakfast_example_007.png" alt="Breakfast qualitative result: ground truth and predicted segmentation bars."></figure>
+        <figure><img class="bordered" src="static/images/qualitative/breakfast_example_003.png" alt="Breakfast qualitative result: ground truth and predicted segmentation bars."></figure>
+        <figure><img class="bordered" src="static/images/qualitative/breakfast_example_011.png" alt="Breakfast qualitative result: ground truth and predicted segmentation bars."></figure>
+      </div>
+    </div>
+
+    <p class="table-caption">
+      <span class="fig-label">Figure 5.</span>
+      Qualitative segmentation results of OVTAS. Top bar: ground truth. Bottom bar: prediction.
+    </p>
+  </div>
+</section>
+
+<!-- =================================================== LIMITATIONS ==== -->
+<section id="limitations">
+  <div class="container">
+    <h2 class="section-title">Limitations &amp; Future Work</h2>
+    <ul class="tight">
+      <li>
+        We evaluate on three prominent action segmentation datasets; future work can extend the
+        study to further benchmarks and domains beyond kitchen and egocentric activities.
+      </li>
+      <li>
+        <b>Prompt engineering is barely explored here.</b> Our label normalisation is deliberately
+        simplistic (&ldquo;pour_coffee&rdquo; &rarr; &ldquo;pour coffee&rdquo;, with verbs attached
+        to build short phrases on GTEA). Richer prompting is a promising and cheap lever.
+      </li>
+      <li>
+        Image-trained VLMs struggle with <b>dynamic motions</b> &mdash; <code>shake</code> is
+        almost entirely misclassified on GTEA, and <code>take</code> acts as a dominant attractor
+        because its reaching motion overlaps with the onset of nearly every other action.
+      </li>
+      <li>
+        Strengthening the <b>temporal modelling ability</b> of the optimal-transport decoder is
+        important for training-free segmentation pipelines generally, especially for long videos
+        and densely packed short segments.
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================================================== BIBTEX ==== -->
+<section id="bibtex">
+  <div class="container">
+    <h2 class="section-title">BibTeX</h2>
+    <div class="copy-row">
+      <button class="copy-btn" data-copy="#bibtex-code">Copy</button>
+    </div>
+<pre class="bibtex" id="bibtex-code">@article{unmesh2026ovtas,
+  title   = {Exploring Vision-Language Models for Open-Vocabulary
+             Zero-Shot Action Segmentation},
+  author  = {Unmesh, Asim and Ramesh, Kaki and Patel, Mayank and
+             Jain, Rahul and Ramani, Karthik},
+  journal = {arXiv preprint arXiv:2602.21406},
+  year    = {2026}
+}</pre>
+  </div>
+</section>
+
+<!-- =============================================== ACKNOWLEDGEMENTS ==== -->
+<section id="acknowledgements">
+  <div class="container">
+    <h2 class="section-title">Acknowledgements</h2>
+    <p class="small muted">
+      We acknowledge the Feddersen Distinguished Professorship Funds. This work was also supported
+      by NSF under the Partnership for Innovation: Technology Transfer (PFI-TT) 2329804. Any
+      opinions, findings, and conclusions expressed in this material are those of the authors and
+      do not necessarily reflect the views of the funding agency.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="container center">
+    <p>
+      &copy; 2026 the authors. Website source is available for reuse under the
+      <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>
+      license.
+    </p>
+    <p class="small">
+      Figures and results are taken from the paper. Datasets (GTEA, 50 Salads, Breakfast) remain
+      subject to their original licenses and terms of use.
+    </p>
+  </div>
+</footer>
+
+<script src="static/js/main.js"></script>
 </body>
 </html>
