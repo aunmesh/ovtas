@@ -40,7 +40,7 @@
 <nav class="navbar">
   <div class="navbar-inner">
     <a href="#abstract">Abstract</a>
-    <a href="#release">Code &amp; Features</a>
+    <a href="#release">Download</a>
     <a href="#method">Method</a>
     <a href="#results">Results</a>
     <a href="#ablations">Ablations</a>
@@ -83,9 +83,10 @@
       <span class="btn btn-soon">
         <span class="ico">&#60;/&#62;</span> Code <span class="tag">Coming soon</span>
       </span>
-      <span class="btn btn-soon">
-        <span class="ico">&#128190;</span> VLM Features <span class="tag">Coming soon</span>
-      </span>
+      <a class="btn" href="https://drive.google.com/file/d/14p0Kvo1P3FO-6PO6w7urUmyYKACdJgIR/view?usp=share_link"
+         target="_blank" rel="noopener">
+        <span class="ico">&#128190;</span> VLM Features <span class="tag tag-new">Available</span>
+      </a>
       <a class="btn" href="#bibtex">
         <span class="ico">&#127991;</span> BibTeX
       </a>
@@ -141,7 +142,7 @@
         VLMs for structured temporal understanding. We release code and embeddings at our project
         page.
         <span class="muted" style="font-family: var(--sans); font-size: 0.85em;">
-          [Release in preparation &mdash; see <a href="#release">below</a>.]
+          [<a href="#release">Features available now</a>; code release in preparation.]
         </span>
       </p>
     </div>
@@ -169,40 +170,50 @@
 <!-- ======================================================= RELEASE ==== -->
 <section id="release">
   <div class="container">
-    <h2 class="section-title">Code &amp; Feature Release</h2>
+    <h2 class="section-title">Downloads</h2>
 
-    <div class="notice">
-      <h4>Coming soon for the community</h4>
-      <p>
-        <b>Our codebase and the extracted vision&ndash;language features will be released publicly
-        on this page.</b> We are preparing the release now and will post the links here as soon as
-        they are ready.
-      </p>
-      <p>The release will include:</p>
-      <ul>
-        <li>
-          <b>The full OVTAS codebase</b> &mdash; feature extraction, the FAES stage, the
-          optimal-transport SMTS decoder, all four training-free baselines
-          (Random&#8209;Uniform, ES&#8209;Mean, ES&#8209;Vote, ES&#8209;NRP), and the evaluation
-          scripts for F1@{10,25,50}, Edit and frame accuracy.
-        </li>
-        <li>
-          <b>Pre-extracted per-frame VLM features</b> for all
-          <b>14 VLMs across all three datasets</b> (GTEA, 50 Salads and Breakfast), together with
-          the cached action-label text embeddings.
-        </li>
-      </ul>
-      <p style="margin-top: 12px;">
-        Extracting features from large VLMs demands substantial compute &mdash; ours were extracted
-        on an NVIDIA A6000. By releasing ready-to-use embeddings we hope to remove that barrier, so
-        that the community can iterate on open-vocabulary action segmentation and other action
-        understanding tasks without repeating the extraction cost.
-      </p>
+    <h3 style="margin-top: 0;">VLM features &mdash; available now</h3>
+    <p>
+      We release the <b>pre-extracted per-frame VLM features</b> for all
+      <b>14 VLMs across all three datasets</b> (GTEA, 50 Salads and Breakfast), together with the
+      cached action-label text embeddings. These are the exact features behind every number
+      reported on this page.
+    </p>
+
+    <div class="dl-row">
+      <a class="btn" href="https://drive.google.com/file/d/14p0Kvo1P3FO-6PO6w7urUmyYKACdJgIR/view?usp=share_link"
+         target="_blank" rel="noopener">
+        <span class="ico">&#128190;</span> Download VLM features
+      </a>
+      <span class="filesize">
+        <code>action_seg_vlm_feats.zip</code> &middot; ~99&thinsp;GB &middot; Google Drive
+      </span>
     </div>
 
-    <p class="center muted small">
-      Please check back here, or watch the arXiv listing for updates.
+    <p class="small muted">
+      Extracting features from large VLMs demands substantial compute &mdash; ours were extracted on
+      an NVIDIA A6000. By releasing ready-to-use embeddings we hope to remove that barrier, so that
+      the community can iterate on open-vocabulary action segmentation and other action
+      understanding tasks without repeating the extraction cost.
     </p>
+    <p class="small muted">
+      The archive is large. Google Drive cannot virus-scan a file this size, so the browser will
+      warn before downloading; for a transfer this big we recommend a resumable command-line client
+      such as <a href="https://github.com/wkentaro/gdown" target="_blank" rel="noopener">gdown</a> or
+      <code>rclone</code> rather than the browser.
+    </p>
+
+    <div class="notice">
+      <h4>Code &mdash; coming soon</h4>
+      <p>
+        <b>The OVTAS codebase will be released publicly on this page.</b> We are preparing the
+        release now and will post the link here as soon as it is ready. It will include feature
+        extraction, the FAES stage, the optimal-transport SMTS decoder, all four training-free
+        baselines (Random&#8209;Uniform, ES&#8209;Mean, ES&#8209;Vote, ES&#8209;NRP), and the
+        evaluation scripts for F1@{10,25,50}, Edit and frame accuracy.
+      </p>
+      <p>Please check back here, or watch the arXiv listing for updates.</p>
+    </div>
   </div>
 </section>
 

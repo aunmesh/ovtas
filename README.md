@@ -48,8 +48,8 @@ static/images/
 
 ## Things you'll want to edit
 
-**When the code and features are released.** Search `index.html` for `btn-soon`. Replace each of
-the two placeholder `<span class="btn btn-soon">…</span>` blocks with a real link, e.g.
+**When the code is released.** One `btn-soon` placeholder is left in `index.html` — the Code
+button in the header. Replace it with a real link:
 
 ```html
 <a class="btn" href="https://github.com/aunmesh/ovtas" target="_blank" rel="noopener">
@@ -57,9 +57,21 @@ the two placeholder `<span class="btn btn-soon">…</span>` blocks with a real l
 </a>
 ```
 
-Then update the "Code &amp; Feature Release" section (`id="release"`) — swap the *coming soon*
-notice for the download links, and drop the `[Release in preparation — see below.]` note at the end
-of the abstract.
+Then in the Downloads section (`id="release"`), replace the `<div class="notice">` *Code — coming
+soon* block with a `dl-row` like the features one above it, and update the note at the end of the
+abstract (search for `code release in preparation`).
+
+**The VLM features download.** Released as `action_seg_vlm_feats.zip` (~99 GB) on Google Drive,
+file id `14p0Kvo1P3FO-6PO6w7urUmyYKACdJgIR`, shared as *anyone with the link → viewer*. The link
+appears twice in `index.html` (header button and Downloads section) — search for
+`14p0Kvo1P3FO` to change both. If you ever move the archive, update the stated size in the
+`filesize` span too.
+
+Note that Drive's per-file download quota can temporarily block a heavily-downloaded public file.
+If that becomes a problem, consider a mirror on Zenodo (free, DOI, no quota, 50 GB per record by
+default — you'd need to split the archive) or Hugging Face Datasets (no practical size cap, and
+resumable via `huggingface_hub`). The page already points users at `gdown`/`rclone` for resumable
+transfers.
 
 **arXiv links.** `2602.21406` appears in three places: the arXiv button, the PDF button and the
 BibTeX block. Search for `2602.21406` to change all three at once.
